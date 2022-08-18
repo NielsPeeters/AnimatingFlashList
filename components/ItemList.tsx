@@ -1,10 +1,10 @@
 /* eslint-disable react-native/no-inline-styles */
 import React, {useState, useEffect, useRef, useCallback} from 'react';
 import {FlashList} from '@shopify/flash-list';
-import {Text} from 'react-native';
-import {RectButton} from 'react-native-gesture-handler';
+import {Pressable, Text} from 'react-native';
 import Animated, {
   interpolate,
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -19,31 +19,47 @@ interface ItemProps {
 const ITEM_HEIGHT = 60;
 const ANIMATION_LENGTH = 600;
 
-const Item = (item: ItemProps) => {
+const Item = ({id, onRemoveItem: removeItem}: ItemProps) => {
   const progress = useSharedValue(1);
+  const height = useSharedValue(1);
+
   useEffect(() => {
     // Reset value when id changes (view was recycled for another item)
     progress.value = 1;
-  }, [item.id, progress]);
+    height.value = ITEM_HEIGHT;
+  }, [id, progress, height]);
 
-  const onRemoveItem = () => {
+  const onRemoveItem = useCallback(
+    (itemId: number) => {
+      removeItem(itemId);
+    },
+    [removeItem],
+  );
+
+  const onRemoveExit = useCallback(() => {
     progress.value = 0;
-    setTimeout(() => {
-      item.onRemoveItem(item.id);
-    }, ANIMATION_LENGTH);
-  };
+    height.value = withDelay(
+      ANIMATION_LENGTH / 2,
+      withTiming(
+        interpolate(0, [0, 1], [0, ITEM_HEIGHT]),
+        undefined,
+        finished => {
+          if (finished) {
+            runOnJS(onRemoveItem)(id);
+          }
+        },
+      ),
+    );
+  }, [progress, id, onRemoveItem, height]);
 
   const AnimatedStyle = useAnimatedStyle(() => {
     return {
       opacity: withTiming(progress.value),
-      height: withDelay(
-        ANIMATION_LENGTH / 2,
-        withTiming(interpolate(progress.value, [0, 1], [0, ITEM_HEIGHT])),
-      ),
       marginTop: withDelay(
         ANIMATION_LENGTH / 2,
         withTiming(interpolate(progress.value, [0, 1], [0, 8])),
       ),
+      height: height.value,
       marginBottom: withDelay(
         ANIMATION_LENGTH / 2,
         withTiming(interpolate(progress.value, [0, 1], [0, 8])),
@@ -58,8 +74,6 @@ const Item = (item: ItemProps) => {
 
   return (
     <Animated.View
-      // entering={FadeInLeft.delay(10 * item.id)}
-      // exiting={FadeOutRight}
       style={[
         {
           marginLeft: 16,
@@ -67,19 +81,19 @@ const Item = (item: ItemProps) => {
         },
         AnimatedStyle,
       ]}>
-      <RectButton
-        onPress={onRemoveItem}
+      <Pressable
+        onPress={onRemoveExit}
         style={[
           {
             backgroundColor: '#78a5e8',
             alignItems: 'center',
             justifyContent: 'center',
             borderRadius: 10,
-            height: ITEM_HEIGHT,
+            height: '100%',
           },
         ]}>
-        <Text style={{fontSize: 20, color: 'black'}}>{`${item.id} Hello`}</Text>
-      </RectButton>
+        <Text style={{fontSize: 20, color: 'black'}}>{`${id} Hello`}</Text>
+      </Pressable>
     </Animated.View>
   );
 };
@@ -94,11 +108,8 @@ const MyList = () => {
   );
 
   const onRemoveItem = useCallback((id: number) => {
-    console.log(id);
     setItems(prevItems => prevItems.filter(item => item.id !== id));
-    list.current?.prepareForLayoutAnimationRender();
-    // After removing the item, we can start the animation.
-    // LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    // list.current?.prepareForLayoutAnimationRender();
   }, []);
 
   return (
