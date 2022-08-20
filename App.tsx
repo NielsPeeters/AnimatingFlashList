@@ -8,12 +8,14 @@
  * @format
  */
 
+import {NavigationContainer} from '@react-navigation/native';
 import React from 'react';
-import {SafeAreaView, StatusBar, useColorScheme} from 'react-native';
+import {StatusBar, useColorScheme, View} from 'react-native';
+import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 
 import {Colors} from 'react-native/Libraries/NewAppScreen';
-import MyList from './components/ItemList';
+import Home from './pages/main/Home';
 
 const App = () => {
   const isDarkMode = useColorScheme() === 'dark';
@@ -22,12 +24,18 @@ const App = () => {
   };
 
   return (
-    <GestureHandlerRootView style={{flex: 1}}>
-      <SafeAreaView style={[backgroundStyle, {flex: 1}]}>
-        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-        <MyList />
-      </SafeAreaView>
-    </GestureHandlerRootView>
+    <View style={[backgroundStyle, {flex: 1}]}>
+      <SafeAreaProvider>
+        <GestureHandlerRootView style={{flex: 1}}>
+          <NavigationContainer>
+            <StatusBar
+              barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+            />
+            <Home />
+          </NavigationContainer>
+        </GestureHandlerRootView>
+      </SafeAreaProvider>
+    </View>
   );
 };
 
